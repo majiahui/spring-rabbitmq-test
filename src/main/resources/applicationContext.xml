@@ -64,6 +64,7 @@
 	<rabbit:admin connection-factory="connectionFactory" />
 	
 	<rabbit:queue name="test.one" />
+	<rabbit:queue name="test.two" />
 	
 	<rabbit:listener-container connection-factory="connectionFactory" concurrency="5" max-concurrency="10" requeue-rejected="false">
 	    <rabbit:listener ref="rabbitMQService" method="receiveMessage" queue-names="test.one" />

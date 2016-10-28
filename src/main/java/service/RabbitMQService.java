@@ -25,4 +25,17 @@ public class RabbitMQService {
 		System.out.println("receive message : " + msg);
 		throw new RuntimeException();
 	}
+	
+	public String sendMessage2() {
+		DateTimeFormatter fmt = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
+		String dateStr = new DateTime().toString(fmt);
+		String msg = "Hello " + dateStr;
+		amqpTemplate.convertAndSend("test.two", msg);
+		return msg;
+	}
+	
+	public void receiveMessage2() {
+		String s = (String) amqpTemplate.receiveAndConvert("test.two");
+		System.out.println(s);
+	}
 }

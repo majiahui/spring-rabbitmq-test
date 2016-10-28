@@ -15,8 +15,20 @@ public class RabbitController {
 	private RabbitMQService rabbitMQService;
 	
 	@ResponseBody
-	@RequestMapping(value = "/v1")
+	@RequestMapping(value = "/s1")
 	public String send() {
 		return rabbitMQService.sendMessage();
+	}
+	
+	@ResponseBody
+	@RequestMapping(value = "/s2")
+	public String send2() {
+		return rabbitMQService.sendMessage2();
+	}
+	
+	@ResponseBody
+	@RequestMapping(value = "/r2")
+	public void receive2() {
+		rabbitMQService.receiveMessage2();
 	}
 }
