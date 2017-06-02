@@ -1,82 +1,58 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:tx="http://www.springframework.org/schema/tx"
-	xmlns:jdbc="http://www.springframework.org/schema/jdbc" xmlns:context="http://www.springframework.org/schema/context"
-	xmlns:mybatis="http://mybatis.org/schema/mybatis-spring" xmlns:aop="http://www.springframework.org/schema/aop"
-	xmlns:task="http://www.springframework.org/schema/task" xmlns:rabbit="http://www.springframework.org/schema/rabbit"
-	xsi:schemaLocation="http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xmlns:rabbit="http://www.springframework.org/schema/rabbit"
+       xsi:schemaLocation="http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
      http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
-     http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc.xsd
-     http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
-     http://mybatis.org/schema/mybatis-spring http://mybatis.org/schema/mybatis-spring.xsd
      http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
      http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd
      http://www.springframework.org/schema/rabbit http://www.springframework.org/schema/rabbit/spring-rabbit-1.3.xsd">
 
-	<bean id="propertyConfigurer"
-		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
-		<property name="locations">
-			<list>
-				<value>classpath*:database.properties</value>
-			</list>
-		</property>
-	</bean>
+    <bean id="propertyConfigurer"
+          class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="locations">
+            <list>
+                <value>classpath:application.properties</value>
+            </list>
+        </property>
+    </bean>
 
-	<bean id="dataSource" class="org.apache.commons.dbcp2.BasicDataSource"
-		destroy-method="close">
-		<property name="driverClassName" value="${jdbc.driverClassName}" />
-		<property name="url" value="${jdbc.url}" />
-		<property name="username" value="${jdbc.username}" />
-		<property name="password" value="${jdbc.password}" />
-	</bean>
+    <!-- enable component scanning and autowire (beware that this does not enable mapper scanning!) -->
+    <context:component-scan base-package="service"/>
 
-	<!-- transaction manager, use DataSourceTransactionManager" for JDBC local 
-		tx -->
-	<bean id="transactionManager"
-		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
-		<property name="dataSource" ref="dataSource" />
-	</bean>
+    <aop:aspectj-autoproxy/>
 
-	<!-- enable component scanning and autowire (beware that this does not enable 
-		mapper scanning!) -->
-	<context:component-scan base-package="service" />
+    <task:scheduler id="scheduler" pool-size="10"/>
+    <task:executor id="executor" pool-size="10"/>
+    <task:annotation-driven executor="executor" scheduler="scheduler"/>
 
-	<!-- enable transaction demarcation with annotations -->
-	<tx:annotation-driven />
+    <bean id="loggingAspect" class="aspect.LoggingAspect"/>
 
-	<!-- define the SqlSessionFactory -->
-	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
-		<property name="dataSource" ref="dataSource" />
-		<property name="typeAliasesPackage" value="entity" />
-	</bean>
+    <rabbit:connection-factory id="connectionFactory" host="127.0.0.1" port="5672"/>
 
-	<!-- scan for mappers and let them be autowired -->
-	<mybatis:scan base-package="mapper" />
+    <rabbit:template id="amqpTemplate" connection-factory="connectionFactory" channel-transacted="true"
+                     retry-template="retryTemplate"/>
 
-	<aop:aspectj-autoproxy />
+    <rabbit:admin connection-factory="connectionFactory"/>
 
-	<bean id="loggingAspect" class="aspect.LoggingAspect" />
-	
-	<rabbit:connection-factory id="connectionFactory" host="127.0.0.1" port="5672" />
-	
-	<rabbit:template id="amqpTemplate" connection-factory="connectionFactory" channel-transacted="true" retry-template="retryTemplate" />
-	
-	<rabbit:admin connection-factory="connectionFactory" />
-	
-	<rabbit:queue name="test.one" />
-	<rabbit:queue name="test.two" />
-	
-	<rabbit:listener-container connection-factory="connectionFactory" concurrency="5" max-concurrency="10" requeue-rejected="false">
-	    <rabbit:listener ref="rabbitMQService" method="receiveMessage" queue-names="test.one" />
-	</rabbit:listener-container>
-	
-	<bean id="retryTemplate" class="org.springframework.retry.support.RetryTemplate">
-		<property name="backOffPolicy">
-			<bean class="org.springframework.retry.backoff.ExponentialBackOffPolicy">
-				<property name="initialInterval" value="500" />
-				<property name="multiplier" value="10.0" />
-				<property name="maxInterval" value="10000" />
-			</bean>
-		</property>
-	</bean>
+    <rabbit:queue name="test.one"/>
+    <rabbit:queue name="test.two"/>
+
+    <rabbit:listener-container connection-factory="connectionFactory" concurrency="5" max-concurrency="10"
+                               requeue-rejected="false">
+        <rabbit:listener ref="rabbitMQService" method="receiveMessage" queue-names="test.one"/>
+    </rabbit:listener-container>
+
+    <bean id="retryTemplate" class="org.springframework.retry.support.RetryTemplate">
+        <property name="backOffPolicy">
+            <bean class="org.springframework.retry.backoff.ExponentialBackOffPolicy">
+                <property name="initialInterval" value="500"/>
+                <property name="multiplier" value="10.0"/>
+                <property name="maxInterval" value="10000"/>
+            </bean>
+        </property>
+    </bean>
 </beans>

@@ -10,7 +10,6 @@ public class RabbitMQServiceTest extends SpringBaseTest {
 	private RabbitMQService rabbitmqService;
 	
 	@Test
-	@Rollback(false)
 	public void testSend() throws InterruptedException {
 		rabbitmqService.sendMessage();
 		Thread.sleep(10000);
